@@ -21,7 +21,7 @@ jobs:
             cd /home/ubuntu/firecrawl
             git fetch origin main
             git reset --hard origin/main
-            docker compose down
-            docker compose up --build -d --wait
+            docker compose build
+            docker compose up -d --wait --remove-orphans
             docker compose ps
             docker image prune -f
