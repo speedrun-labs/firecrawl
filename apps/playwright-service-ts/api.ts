@@ -16,6 +16,8 @@ app.use(express.json());
 const BLOCK_MEDIA = (process.env.BLOCK_MEDIA || 'False').toUpperCase() === 'TRUE';
 const MAX_CONCURRENT_PAGES = Math.max(1, Number.parseInt(process.env.MAX_CONCURRENT_PAGES ?? '10', 10) || 10);
 const ALLOW_LOCAL_WEBHOOKS = (process.env.ALLOW_LOCAL_WEBHOOKS || 'False').toUpperCase() === 'TRUE';
+const POST_LOAD_NETWORKIDLE_TIMEOUT = Math.max(0,
+  Number.parseInt(process.env.PLAYWRIGHT_NETWORKIDLE_TIMEOUT ?? '1500', 10) || 0);
 const DNS_CACHE_TTL_MS = 30_000;
 
 const PROXY_SERVER = process.env.PROXY_SERVER || null;
@@ -296,6 +298,16 @@ const scrapePage = async (
       );
     }
     throw error;
+  }
+
+  // Best-effort networkidle: give JS-rendered content a chance to load
+  // without blocking on sites with persistent connections.
+  if (POST_LOAD_NETWORKIDLE_TIMEOUT > 0 && waitAfterLoad === 0) {
+    try {
+      await page.waitForLoadState('networkidle', { timeout: POST_LOAD_NETWORKIDLE_TIMEOUT });
+    } catch {
+      // Expected on sites with persistent connections — proceed with what we have
+    }
   }
 
   if (waitAfterLoad > 0) {
