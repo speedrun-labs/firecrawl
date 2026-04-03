@@ -83,6 +83,12 @@ services:
         max-size: "10m"
         max-file: "3"
         compress: "true"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     tmpfs:
       - /tmp/.cache:noexec,nosuid,size=1g
 
@@ -106,6 +112,12 @@ services:
     ports:
       - "${PORT:-3002}:${INTERNAL_PORT:-3002}"
     command: node dist/src/harness.js --start-docker
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     # Resource limits for Docker Compose (not Swarm)
     # Increase if you have more CPU cores/RAM available
     cpus: 4.0
@@ -122,6 +134,12 @@ services:
     networks:
       - backend
     command: redis-server --bind 0.0.0.0
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
     logging:
       driver: "json-file"
       options:
@@ -156,6 +174,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     networks:
       - backend
     logging:
