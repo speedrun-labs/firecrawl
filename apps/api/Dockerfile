@@ -60,7 +60,7 @@ RUN apt-get update && apt-get install -y \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 8080
+EXPOSE 3002
 WORKDIR /app
 
 # Copy built application

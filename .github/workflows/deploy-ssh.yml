@@ -19,7 +19,9 @@ jobs:
           script: |
             set -e
             cd /home/ubuntu/firecrawl
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             docker compose down
             docker compose up --build -d --wait
             docker compose ps
+            docker image prune -f

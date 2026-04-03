@@ -5,6 +5,7 @@ x-common-service: &common-service
   # comment out the build: statement and uncomment the image: statement
   # image: ghcr.io/firecrawl/firecrawl
   build: apps/api
+  restart: unless-stopped
 
   ulimits:
     nofile:
@@ -62,6 +63,7 @@ services:
     # comment out the build: statement and uncomment the image: statement
     # image: ghcr.io/firecrawl/playwright-service:latest
     build: apps/playwright-service-ts
+    restart: unless-stopped
     environment:
       PORT: 3000
       PROXY_SERVER: ${PROXY_SERVER}
@@ -104,9 +106,9 @@ services:
       ENV: local
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
       playwright-service:
-        condition: service_started
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
     ports:
@@ -130,9 +132,12 @@ services:
     # Using Valkey with Firecrawl is untested and not guaranteed to work. Use with caution.
     image: redis:alpine
     # image: valkey/valkey:alpine
+    restart: unless-stopped
 
     networks:
       - backend
+    volumes:
+      - redis-data:/data
     command: redis-server --bind 0.0.0.0
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -149,6 +154,7 @@ services:
     
   rabbitmq:
     image: rabbitmq:3-management
+    restart: unless-stopped
     networks:
       - backend
     command: rabbitmq-server
@@ -170,10 +176,13 @@ services:
     # comment out the build: statement and uncomment the image: statement
     # image: ghcr.io/firecrawl/nuq-postgres:latest
     build: apps/nuq-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
@@ -188,6 +197,10 @@ services:
         max-size: "10m"
         max-file: "3"
         compress: "true"
+
+volumes:
+  postgres-data:
+  redis-data:
 
 networks:
   backend:
