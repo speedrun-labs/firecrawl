@@ -32,10 +32,10 @@ x-common-env: &common-env
   POSTGRES_HOST: ${POSTGRES_HOST:-nuq-postgres}
   POSTGRES_PORT: ${POSTGRES_PORT:-5432}
   USE_DB_AUTHENTICATION: ${USE_DB_AUTHENTICATION:-false}
-  NUM_WORKERS_PER_QUEUE: ${NUM_WORKERS_PER_QUEUE:-8}
-  CRAWL_CONCURRENT_REQUESTS: ${CRAWL_CONCURRENT_REQUESTS:-10}
-  MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-5}
-  BROWSER_POOL_SIZE: ${BROWSER_POOL_SIZE:-5}
+  NUM_WORKERS_PER_QUEUE: ${NUM_WORKERS_PER_QUEUE:-4}
+  CRAWL_CONCURRENT_REQUESTS: ${CRAWL_CONCURRENT_REQUESTS:-5}
+  MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-4}
+  BROWSER_POOL_SIZE: ${BROWSER_POOL_SIZE:-3}
   OPENAI_API_KEY: ${OPENAI_API_KEY}
   OPENAI_BASE_URL: ${OPENAI_BASE_URL}
   MODEL_NAME: ${MODEL_NAME}
@@ -72,13 +72,14 @@ services:
       ALLOW_LOCAL_WEBHOOKS: ${ALLOW_LOCAL_WEBHOOKS}
       BLOCK_MEDIA: ${BLOCK_MEDIA}
       # Configure maximum concurrent pages for Playwright browser instances
-      MAX_CONCURRENT_PAGES: ${CRAWL_CONCURRENT_REQUESTS:-10}
+      MAX_CONCURRENT_PAGES: ${CRAWL_CONCURRENT_REQUESTS:-5}
     networks:
       - backend
     # Resource limits for Docker Compose (not Swarm)
-    cpus: 2.0
-    mem_limit: 4G
-    memswap_limit: 4G
+    cpus: 1.0
+    mem_limit: 3G
+    memswap_limit: 3G
+    shm_size: 1gb
     logging:
       driver: "json-file"
       options:
@@ -86,11 +87,11 @@ services:
         max-file: "3"
         compress: "true"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      test: ["CMD", "node", "-e", "const h=require('http');h.get('http://localhost:3000/health',(r)=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>process.exit(r.statusCode===200?0:1))}).on('error',()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      start_period: 30s
     tmpfs:
       - /tmp/.cache:noexec,nosuid,size=1g
 
@@ -103,6 +104,8 @@ services:
       EXTRACT_WORKER_PORT: ${EXTRACT_WORKER_PORT:-3004}
       WORKER_PORT: ${WORKER_PORT:-3005}
       NUQ_RABBITMQ_URL: amqp://rabbitmq:5672
+      NUQ_WORKER_COUNT: ${NUQ_WORKER_COUNT:-3}
+      NODE_OPTIONS: "--max-old-space-size=4096"
       ENV: local
     depends_on:
       redis:
@@ -111,18 +114,21 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      nuq-postgres:
+        condition: service_healthy
+    stop_grace_period: 30s
     ports:
       - "${PORT:-3002}:${INTERNAL_PORT:-3002}"
     command: node dist/src/harness.js --start-docker
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002"]
+      test: ["CMD", "node", "-e", "const h=require('http');h.get('http://localhost:3002',(r)=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>process.exit(r.statusCode===200?0:1))}).on('error',()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
     # Resource limits for Docker Compose (not Swarm)
     # Increase if you have more CPU cores/RAM available
-    cpus: 4.0
+    cpus: 2.5
     mem_limit: 8G
     memswap_limit: 8G
 
@@ -136,9 +142,7 @@ services:
 
     networks:
       - backend
-    volumes:
-      - redis-data:/data
-    command: redis-server --bind 0.0.0.0
+    command: redis-server --bind 0.0.0.0 --maxmemory 2gb --maxmemory-policy allkeys-lru --save "" --appendonly no --tcp-keepalive 60
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -214,7 +218,6 @@ services:
 
 volumes:
   postgres-data:
-  redis-data:
 
 networks:
   backend:
