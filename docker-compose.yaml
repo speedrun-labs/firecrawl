@@ -227,7 +227,7 @@ services:
         VITE_FIRECRAWL_API_KEY: ${MONITORING_UI_API_KEY:-dummy}
     restart: unless-stopped
     ports:
-      - "${MONITORING_UI_PORT:-3006}:80"
+      - "${MONITORING_UI_PORT:-3006}:3006"
     networks:
       - backend
     depends_on:
