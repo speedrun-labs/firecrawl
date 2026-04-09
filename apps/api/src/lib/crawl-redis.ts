@@ -7,6 +7,7 @@ import { getAdjustedMaxDepth } from "../scraper/WebScraper/utils/maxDepthUtils";
 import type { Logger } from "winston";
 import { withSpan, setSpanAttributes } from "./otel-tracer";
 import { getScrapeZDR } from "./zdr-helpers";
+import { crawlGroup } from "../services/worker/nuq";
 
 export type StoredCrawl = {
   originUrl?: string;
@@ -89,6 +90,27 @@ export async function getCrawl(id: string): Promise<StoredCrawl | null> {
 
     return crawl;
   });
+}
+
+/**
+ * Resolve every active crawl group for a team to its full StoredCrawl record.
+ * Drops records that have expired from Redis between the group lookup and the
+ * fetch, and records marked cancelled. Returns both crawls and batch scrapes —
+ * callers that want only one kind should filter on `crawlerOptions`.
+ */
+export async function getOngoingCrawlsForTeam(
+  teamId: string,
+): Promise<(StoredCrawl & { id: string })[]> {
+  const ids = (await crawlGroup.getOngoingByOwner(teamId)).map(x => x.id);
+  const records = await Promise.all(
+    ids.map(async id => {
+      const crawl = await getCrawl(id);
+      return crawl ? { ...crawl, id } : null;
+    }),
+  );
+  return records.filter(
+    (x): x is StoredCrawl & { id: string } => x !== null && !x.cancelled,
+  );
 }
 
 export async function getCrawlExpiry(id: string): Promise<Date> {

@@ -12,6 +12,7 @@ import { crawlStatusController } from "../controllers/v2/crawl-status";
 import { mapController } from "../controllers/v2/map";
 import { crawlErrorsController } from "../controllers/v2/crawl-errors";
 import { ongoingCrawlsController } from "../controllers/v2/crawl-ongoing";
+import { ongoingJobsController } from "../controllers/v2/jobs-ongoing";
 import { scrapeStatusController } from "../controllers/v2/scrape-status";
 import { creditUsageController } from "../controllers/v2/credit-usage";
 import { tokenUsageController } from "../controllers/v2/token-usage";
@@ -266,6 +267,12 @@ v2Router.get(
   "/crawl/active",
   authMiddleware(RateLimiterMode.CrawlStatus),
   wrap(ongoingCrawlsController),
+);
+
+v2Router.get(
+  "/team/jobs/ongoing",
+  authMiddleware(RateLimiterMode.CrawlStatus),
+  wrap(ongoingJobsController),
 );
 
 v2Router.get(

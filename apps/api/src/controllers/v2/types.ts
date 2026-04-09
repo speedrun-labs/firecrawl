@@ -1274,6 +1274,19 @@ export type OngoingCrawlsResponse =
       }[];
     };
 
+export type OngoingJobsResponse =
+  | ErrorResponse
+  | {
+      success: true;
+      jobs: {
+        id: string;
+        kind: "crawl" | "batch_scrape";
+        teamId: string;
+        url: string | null;
+        created_at: string;
+      }[];
+    };
+
 export type CrawlErrorsResponse =
   | ErrorResponse
   | {

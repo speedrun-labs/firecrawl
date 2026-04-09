@@ -219,6 +219,26 @@ services:
       retries: 3
       start_period: 5s
 
+  monitoring-ui:
+    build:
+      context: apps/ui/monitoring-ui
+      args:
+        VITE_FIRECRAWL_API_URL: ${MONITORING_UI_API_URL:-http://localhost:3002}
+        VITE_FIRECRAWL_API_KEY: ${MONITORING_UI_API_KEY:-dummy}
+    restart: unless-stopped
+    ports:
+      - "${MONITORING_UI_PORT:-3006}:80"
+    networks:
+      - backend
+    depends_on:
+      - api
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+        compress: "true"
+
 volumes:
   postgres-data:
 
