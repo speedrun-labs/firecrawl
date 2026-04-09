@@ -74,15 +74,18 @@ services:
       # Best-effort networkidle timeout (ms) after page load for JS rendering.
       # Set to 0 to disable (revert to old behavior). Default 1500ms.
       PLAYWRIGHT_NETWORKIDLE_TIMEOUT: ${PLAYWRIGHT_NETWORKIDLE_TIMEOUT:-1500}
-      # Configure maximum concurrent pages for Playwright browser instances
-      MAX_CONCURRENT_PAGES: ${CRAWL_CONCURRENT_REQUESTS:-5}
+      # Configure maximum concurrent pages for Playwright browser instances.
+      # Decoupled from CRAWL_CONCURRENT_REQUESTS so it can be tuned independently;
+      # falls back to CRAWL_CONCURRENT_REQUESTS, then 5.
+      MAX_CONCURRENT_PAGES: ${MAX_CONCURRENT_PAGES:-${CRAWL_CONCURRENT_REQUESTS:-5}}
     networks:
       - backend
-    # Resource limits for Docker Compose (not Swarm)
-    cpus: 1.0
-    mem_limit: 3G
-    memswap_limit: 3G
-    shm_size: 1gb
+    # Resource limits for Docker Compose (not Swarm).
+    # Override per-host via PLAYWRIGHT_CPUS / PLAYWRIGHT_MEM_LIMIT / PLAYWRIGHT_SHM_SIZE.
+    cpus: ${PLAYWRIGHT_CPUS:-3.0}
+    mem_limit: ${PLAYWRIGHT_MEM_LIMIT:-7G}
+    memswap_limit: ${PLAYWRIGHT_MEM_LIMIT:-7G}
+    shm_size: ${PLAYWRIGHT_SHM_SIZE:-2gb}
     logging:
       driver: "json-file"
       options:
@@ -107,7 +110,7 @@ services:
       EXTRACT_WORKER_PORT: ${EXTRACT_WORKER_PORT:-3004}
       WORKER_PORT: ${WORKER_PORT:-3005}
       NUQ_RABBITMQ_URL: amqp://rabbitmq:5672
-      NUQ_WORKER_COUNT: ${NUQ_WORKER_COUNT:-3}
+      NUQ_WORKER_COUNT: ${NUQ_WORKER_COUNT:-5}
       NODE_OPTIONS: "--max-old-space-size=4096"
       ENV: local
     depends_on:
@@ -132,8 +135,8 @@ services:
     # Resource limits for Docker Compose (not Swarm)
     # Increase if you have more CPU cores/RAM available
     cpus: 2.5
-    mem_limit: 8G
-    memswap_limit: 8G
+    mem_limit: 7G
+    memswap_limit: 7G
 
   redis:
     # NOTE: If you want to use Valkey (open source) instead of Redis (source available),
